@@ -6,6 +6,7 @@ import os
 class JSONLProcessor:
     def __init__(self, datas_location):
         self.datas_location = datas_location
+        self.output_suffix = "Output"
 
     def validate_json(self, json_object, seen_texts):
         if "text" not in json_object:
@@ -46,7 +47,13 @@ class JSONLProcessor:
 
         for file in files:
             base_name, file_ext = os.path.splitext(file)
-            output_file_path = f"{base_name}_Output{file_ext}"
+            output_file_path = f"{base_name}_{self.output_suffix}{file_ext}"
+
+            #skip processed files
+            if self.output_suffix in file:
+                continue
+            if os.path.exists(output_file_path):
+                continue
 
             print(f"Processing {file}...")
 
