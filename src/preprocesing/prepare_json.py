@@ -1,7 +1,8 @@
-import json
-import re
 import glob
+import json
 import os
+import re
+
 
 class JSONLProcessor:
     def __init__(self, datas_location):
@@ -11,20 +12,20 @@ class JSONLProcessor:
     def validate_json(self, json_object, seen_texts):
         if "text" not in json_object:
             return False
-        
+
         if len(json_object["text"]) <= 5:
             return False
 
         if json_object["text"] in seen_texts:
             return False
-        
+
         return True
 
     def normalize_text(self, text):
         # Convert to lowercase
         text = text.lower()
         # Remove non-alphanumeric characters except spaces
-        text = re.sub(r'[^a-z0-9\s]', '', text)
+        text = re.sub(r"[^a-z0-9\s]", "", text)
         # Trim leading and trailing spaces
         text = text.strip()
         return text
@@ -32,7 +33,7 @@ class JSONLProcessor:
     def process_json_object(self, json_object):
         # Remove "images" field if it exists
         json_object.pop("images", None)
-        
+
         # Normalize "text" field if it exists
         if "text" in json_object:
             json_object["text"] = self.normalize_text(json_object["text"])
@@ -59,18 +60,17 @@ class JSONLProcessor:
 
             seen_texts = set()
 
-            with open(file, 'r') as infile, open(output_file_path, 'w') as outfile:
+            with open(file, "r") as infile, open(output_file_path, "w") as outfile:
                 for line in infile:
                     json_object = json.loads(line)
                     updated_json_object = self.process_json_object(json_object)
 
-                    if(self.validate_json(updated_json_object, seen_texts)):
+                    if self.validate_json(updated_json_object, seen_texts):
                         seen_texts.add(updated_json_object["text"])
-                        outfile.write(json.dumps(updated_json_object) + '\n')
+                        outfile.write(json.dumps(updated_json_object) + "\n")
 
             print(f"Processed {file} and saved to {output_file_path}")
 
 
 processor = JSONLProcessor("./../datas/")
 processor.process_files()
-

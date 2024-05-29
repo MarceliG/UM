@@ -11,7 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, make_scorer
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
-from text import split_data
+from preprocesing import split_data
 
 
 class SVMclassifier:
@@ -37,7 +37,7 @@ class SVMclassifier:
         decision_function_shape: str = "ovr",
         break_ties: bool = False,
         random_state: Optional[int] = None,
-    ):
+    ) -> Dict:
         """
         Creates an SVM model with specified hyperparameters.
 
@@ -70,7 +70,7 @@ class SVMclassifier:
         Returns:
             An SVM model configured with the specified parameters.
         """
-        return svm.SVC(
+        model = svm.SVC(
             C=c,
             kernel=kernel,
             degree=degree,
@@ -88,6 +88,27 @@ class SVMclassifier:
             random_state=random_state,
         )
 
+        return {
+            "model": model,
+            "parameters": {
+                "C": c,
+                "kernel": kernel,
+                "degree": degree,
+                "gamma": gamma,
+                "coef0": coef0,
+                "shrinking": shrinking,
+                "probability": probability,
+                "tol": tol,
+                "cache_size": cache_size,
+                "class_weight": class_weight,
+                "verbose": verbose,
+                "max_iter": max_iter,
+                "decision_function_shape": decision_function_shape,
+                "break_ties": break_ties,
+                "random_state": random_state,
+            },
+        }
+
     def create_models_with_all_kernels(self) -> Dict[str, svm.SVC]:
         """
         Creates SVM models with each kernel type.
@@ -103,7 +124,7 @@ class SVMclassifier:
 
         return models
 
-    def optimize_parameters(self, texts: np.ndarray, labels: np.ndarray, n_trials: int = 100) -> svm.SVC:
+    def find_best_model(self, texts: np.ndarray, labels: np.ndarray, n_trials: int = 100) -> Dict:
         """
         Use Optuna to optimize hyperparameters.
 
@@ -113,19 +134,30 @@ class SVMclassifier:
             n_trials: Number of trials for the optimization.
 
         Returns:
-            The best model with optimized parameters.
+            A dictionary containing the best model with optimized parameters.
         """
         study = optuna.create_study(direction="maximize")
         study.optimize(lambda trial: self.objective(trial, texts, labels), n_trials=n_trials)
 
         best_params = study.best_params
-        return self.create_model(
+        best_model = self.create_model(
             c=best_params["C"],
             kernel=best_params["kernel"],
             degree=best_params.get("degree", 3),
             gamma=best_params.get("gamma", "scale"),
             coef0=best_params.get("coef0", 0.0),
+            shrinking=best_params.get("shrinking", True),
+            probability=best_params.get("probability", False),
+            tol=best_params.get("tol", 0.001),
+            cache_size=best_params.get("cache_size", 200),
+            class_weight=best_params.get("class_weight"),
+            verbose=best_params.get("verbose", False),
+            max_iter=best_params.get("max_iter", -1),
+            decision_function_shape=best_params.get("decision_function_shape", "ovr"),
+            break_ties=best_params.get("break_ties", False),
+            random_state=best_params.get("random_state"),
         )
+        return {"best_model": best_model["model"], "best_parameters": best_model["parameters"]}
 
     def objective(self, trial: optuna.Trial, texts: np.ndarray, labels: np.ndarray) -> float:
         """
@@ -145,13 +177,29 @@ class SVMclassifier:
         gamma = trial.suggest_categorical("gamma", ["scale", "auto"])
         coef0 = trial.suggest_uniform("coef0", -10, 10)
 
-        model = self.create_model(c=c, kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
-        scores = cross_val_score(model, texts, labels, cv=5)
+        model = self.create_model(
+            c=c,
+            kernel=kernel,
+            degree=degree,
+            gamma=gamma,
+            coef0=coef0,
+            shrinking=True,
+            probability=False,
+            tol=0.001,
+            cache_size=200,
+            class_weight=None,
+            verbose=False,
+            max_iter=-1,
+            decision_function_shape="ovr",
+            break_ties=False,
+            random_state=None,
+        )
+        scores = cross_val_score(model["model"], texts, labels, cv=5)
         return scores.mean()
 
 
-def main():
-    """Main SVM function."""
+def run_svm(model_type: str):
+    """Run SVM function."""
 
     nltk.download("stopwords")
 
@@ -196,24 +244,28 @@ def main():
         labels_test,
     ) = split_data(texts=x_tfidf, labels=labels)
 
-    model = svm.SVC(kernel="linear")
-
     svm_classifier = SVMclassifier()
-    models = svm_classifier.create_models_with_all_kernels()
-    for model_name, model in models.items():
-        model.fit(texts_train, labels_train)
-        labels_pred = model.predict(texts_test)
 
-        print(f"*****{model_name}*****")
-        print("Accuracy:", accuracy_score(labels_test, labels_pred))
+    if model_type == "default":
+        models = svm_classifier.create_models_with_all_kernels()
+        for model_name, model in models.items():
+            model.fit(texts_train, labels_train)
+            labels_pred = model.predict(texts_test)
+
+            print(f"*****{model_name}*****")
+            print("Accuracy:", accuracy_score(labels_test, labels_pred))
+            print("Classification Report:")
+            print(classification_report(labels_test, labels_pred))
+            print()
+    elif model_type == "best":
+        best_model_dict = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
+        best_model_dict.get("best_model").fit(texts_train, labels_train)
+        labels_pred_best_model = model.predict(texts_test)
+        print("*****best_model*****")
+        print("Accuracy:", accuracy_score(labels_test, labels_pred_best_model))
         print("Classification Report:")
         print(classification_report(labels_test, labels_pred))
         print()
 
 
-if __name__ == "__main__":
-    main()
-
-
 # Upewnienie się, że dane są zbalansowane
-# Bayesian Optimization

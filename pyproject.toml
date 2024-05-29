@@ -50,6 +50,7 @@ ignore = [
     "D212",     # Multiline docstring summary should start at the second line
     "EM101",    # Missing exception type in 'except'
     "EM103",    # Exception name should be lowercase
+    "F401",     # Unused imports in __init__.py
     "FA100",    # Incorrect use of assert statement
     "FBT001",   # assert False
     "FBT002",   # assert True
