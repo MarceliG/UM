@@ -12,6 +12,7 @@ from sklearn.metrics import accuracy_score, classification_report, make_scorer
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 from preprocesing import split_data
+from svm import save_svm_model
 
 
 class SVMclassifier:
@@ -261,9 +262,9 @@ def run_svm(model_type: str):
                 )
             )
     elif model_type == "best":
-        best_model_dict = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
-        best_model_dict.get("best_model").fit(texts_train, labels_train)
-        labels_pred_best_model = best_model_dict.get("best_model").predict(texts_test)
+        models = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
+        models.get("best_model").fit(texts_train, labels_train)
+        labels_pred_best_model = models.get("best_model").predict(texts_test)
         print("*****best_model*****")
         print("Classification Report:")
         print(
@@ -273,10 +274,9 @@ def run_svm(model_type: str):
                 zero_division=0,
             )
         )
-        print(best_model_dict)
-
+        print(models)
+    save_svm_model(models="dupa")
 
 
 # Upewnienie się, że dane są zbalansowane
 # zapisz modele default i model best oraz parametry jakie mają
-

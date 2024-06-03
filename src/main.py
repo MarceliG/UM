@@ -3,7 +3,7 @@ import argparse
 from svm import run_svm
 
 
-def run_model(model_type: str, param_type: str, save: bool):
+def run_model(model_type: str, param_type: str):
     if model_type == "svm":
         if param_type == "default":
             print("Running SVM with default parameters...")
@@ -15,10 +15,6 @@ def run_model(model_type: str, param_type: str, save: bool):
             print("Running BERT with default parameters...")
         elif param_type == "best":
             print("Running BERT with best parameters...")
-
-    if save:
-        print(f"Saving {model_type} model with {param_type} parameters...")
-        # Implement model saving logic here
 
 
 def main():
@@ -49,12 +45,7 @@ def main():
         nargs="*",
         help="Train BERT model. Options: 'default', 'best'. You can specify both.",
     )
-    parser.add_argument(
-        "-s",
-        "--save",
-        action="store_false",
-        help="Save fine-tuned run models.",
-    )
+
     args = parser.parse_args()
     if args.download_data:
         print("Downloading data...")
@@ -62,13 +53,11 @@ def main():
     if args.pre_processing:
         print("Running text processing and saving the processed text...")
 
-    if args.svm:
-        for param in args.svm:
-            run_model("svm", param, args.save)
-
-    if args.bert:
-        for param in args.bert:
-            run_model("bert", param, args.save)
+    for model_type in ["svm", "bert"]:
+        params = getattr(args, model_type)
+        if params:
+            for param in params:
+                run_model(model_type, param)
 
     # always display classification report
 
