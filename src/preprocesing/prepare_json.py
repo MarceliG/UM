@@ -46,10 +46,18 @@ class JSONLProcessor:
         if not files:
             print("No files to prepare")
             return
+        
+        #directory for output exists
+        directory = f"{self.datas_location}\Output"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
         for file in files:
-            base_name, file_ext = os.path.splitext(file)
-            output_file_path = f"{base_name}_{self.output_suffix}{file_ext}"
+            basename = os.path.basename(file)
+            file_name = os.path.splitext(basename)[0]
+            file_ext = os.path.splitext(basename)[1]
+
+            output_file_path = f"{directory}\{file_name}_{self.output_suffix}{file_ext}"
 
             #skip processed files
             if self.output_suffix in file:

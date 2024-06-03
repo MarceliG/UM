@@ -14,6 +14,9 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 from preprocesing import split_data
 from svm import save_svm_model
 
+import os
+import json
+
 
 class SVMclassifier:
     """Class to find the best parameters of the SVM model."""
@@ -205,27 +208,31 @@ def run_svm(model_type: str):
     nltk.download("stopwords")
 
     # Replace with the proper texts
-    data = {
-        "text": [
-            "I love this movie, it was fantastic!",
-            "I hate this movie, it was terrible!",
-            "This film was amazing, I enjoyed it a lot.",
-            "What a bad movie, I did not like it.",
-            "Great plot and excellent acting!",
-            "Worst film ever, completely awful.",
-            "It was an okay movie, nothing special.",
-            "The storyline was very boring and dull.",
-            "Loved the movie, it was wonderful!",
-            "Terrible film, I disliked it a lot.",
-            "Fantastic movie with great acting!",
-            "Awful movie, not worth watching.",
-            "One of the best movies I've seen.",
-            "Really bad film, don't recommend it.",
-            "Enjoyed every moment of the movie!",
-            "The movie was very disappointing.",
-        ],
-        "label": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    }
+    data_directory = os.path.join(os.path.filename(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
+    with open(data_directory, "r") as file:
+        data = json.load(file)
+
+    # data = {
+    #     "text": [
+    #         "I love this movie, it was fantastic!",
+    #         "I hate this movie, it was terrible!",
+    #         "This film was amazing, I enjoyed it a lot.",
+    #         "What a bad movie, I did not like it.",
+    #         "Great plot and excellent acting!",
+    #         "Worst film ever, completely awful.",
+    #         "It was an okay movie, nothing special.",
+    #         "The storyline was very boring and dull.",
+    #         "Loved the movie, it was wonderful!",
+    #         "Terrible film, I disliked it a lot.",
+    #         "Fantastic movie with great acting!",
+    #         "Awful movie, not worth watching.",
+    #         "One of the best movies I've seen.",
+    #         "Really bad film, don't recommend it.",
+    #         "Enjoyed every moment of the movie!",
+    #         "The movie was very disappointing.",
+    #     ],
+    #     "label": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+    # }
 
     df = pd.DataFrame(data)
     texts = df["text"]
