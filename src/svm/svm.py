@@ -208,7 +208,7 @@ def run_svm(model_type: str):
     nltk.download("stopwords")
 
     # Replace with the proper texts
-    data_directory = os.path.join(os.path.filename(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
+    data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
     with open(data_directory, "r") as file:
         data = json.load(file)
 
