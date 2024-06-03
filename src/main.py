@@ -7,9 +7,9 @@ def run_model(model_type: str, param_type: str, save: bool):
     if model_type == "svm":
         if param_type == "default":
             print("Running SVM with default parameters...")
-            run_svm(model_type=param_type)
         elif param_type == "best":
             print("Running SVM with best parameters...")
+        run_svm(model_type=param_type)
     elif model_type == "bert":
         if param_type == "default":
             print("Running BERT with default parameters...")

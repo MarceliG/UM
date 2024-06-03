@@ -249,23 +249,34 @@ def run_svm(model_type: str):
     if model_type == "default":
         models = svm_classifier.create_models_with_all_kernels()
         for model_name, model in models.items():
-            model.fit(texts_train, labels_train)
-            labels_pred = model.predict(texts_test)
-
+            model.get("model").fit(texts_train, labels_train)
+            labels_pred = model.get("model").predict(texts_test)
             print(f"*****{model_name}*****")
-            print("Accuracy:", accuracy_score(labels_test, labels_pred))
             print("Classification Report:")
-            print(classification_report(labels_test, labels_pred))
-            print()
+            print(
+                classification_report(
+                    labels_test,
+                    labels_pred,
+                    zero_division=0,
+                )
+            )
     elif model_type == "best":
         best_model_dict = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
         best_model_dict.get("best_model").fit(texts_train, labels_train)
-        labels_pred_best_model = model.predict(texts_test)
+        labels_pred_best_model = best_model_dict.get("best_model").predict(texts_test)
         print("*****best_model*****")
-        print("Accuracy:", accuracy_score(labels_test, labels_pred_best_model))
         print("Classification Report:")
-        print(classification_report(labels_test, labels_pred))
-        print()
+        print(
+            classification_report(
+                labels_test,
+                labels_pred_best_model,
+                zero_division=0,
+            )
+        )
+        print(best_model_dict)
+
 
 
 # Upewnienie się, że dane są zbalansowane
+# zapisz modele default i model best oraz parametry jakie mają
+
