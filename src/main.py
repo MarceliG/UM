@@ -1,5 +1,6 @@
 import argparse
 
+from download_data import download
 from svm import run_svm
 
 
@@ -36,7 +37,6 @@ def main():
         "--svm",
         choices=["default", "best"],
         nargs="*",
-        default=["default", "best"],
         help="Train SVM model. Options: 'default', 'best'. You can specify both.",
     )
     parser.add_argument(
@@ -48,19 +48,19 @@ def main():
 
     args = parser.parse_args()
     if args.download_data:
-        print("Downloading data...")
+        download()
 
     if args.pre_processing:
         print("Running text processing and saving the processed text...")
 
-    for model_type in ["svm", "bert"]:
-        params = getattr(args, model_type)
-        if params:
-            for param in params:
-                run_model(model_type, param)
-
-    # always display classification report
+    if args.svm:
+        for svm_option in args.svm:
+            run_model(model_type="svm", param=svm_option)
+    if args.bert:
+        for svm_option in args.bert:
+            run_model(model_type="bert", param=svm_option)
 
 
 if __name__ == "__main__":
     main()
+    print("Finish program")
