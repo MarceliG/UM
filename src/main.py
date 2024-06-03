@@ -1,6 +1,6 @@
 import argparse
 
-from download_data import download
+from data_manager import download
 from svm import run_svm
 
 
