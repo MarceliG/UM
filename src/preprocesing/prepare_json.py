@@ -8,12 +8,13 @@ class JSONLProcessor:
     def __init__(self, datas_location):
         self.datas_location = datas_location
         self.output_suffix = "Output"
+        self.min_length = 5
 
     def validate_json(self, json_object, seen_texts):
         if "text" not in json_object:
             return False
 
-        if len(json_object["text"]) <= 5:
+        if len(json_object["text"]) <= self.min_length:
             return False
 
         if json_object["text"] in seen_texts:
@@ -72,5 +73,6 @@ class JSONLProcessor:
             print(f"Processed {file} and saved to {output_file_path}")
 
 
-processor = JSONLProcessor("./../datas/")
+data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas")
+processor = JSONLProcessor(data_directory)
 processor.process_files()
