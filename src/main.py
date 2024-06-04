@@ -55,10 +55,10 @@ def main():
 
     if args.svm:
         for svm_option in args.svm:
-            run_model(model_type="svm", param=svm_option)
+            run_model(model_type="svm", param_type=svm_option)
     if args.bert:
         for svm_option in args.bert:
-            run_model(model_type="bert", param=svm_option)
+            run_model(model_type="bert", param_type=svm_option)
 
 
 if __name__ == "__main__":
