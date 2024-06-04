@@ -57,7 +57,7 @@ class JSONLProcessor:
             file_name = os.path.splitext(basename)[0]
             file_ext = os.path.splitext(basename)[1]
 
-            output_file_path = f"{directory}\{file_name}_{self.output_suffix}{file_ext}"
+            output_file_path = os.path.join(directory, f"{file_name}_{self.output_suffix}{file_ext}")
 
             #skip processed files
             if self.output_suffix in file:
