@@ -1,3 +1,5 @@
+import json
+import os
 from typing import Dict, Optional, Union
 
 import nltk
@@ -13,9 +15,6 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 from preprocesing import split_data
 from svm import save_svm_model
-
-import os
-import json
 
 
 class SVMclassifier:
@@ -208,31 +207,31 @@ def run_svm(model_type: str):
     nltk.download("stopwords")
 
     # Replace with the proper texts
-    data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
-    with open(data_directory, "r") as file:
-        data = json.load(file)
+    # data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
+    # with open(data_directory, "r") as file:
+    #     data = json.load(file)
 
-    # data = {
-    #     "text": [
-    #         "I love this movie, it was fantastic!",
-    #         "I hate this movie, it was terrible!",
-    #         "This film was amazing, I enjoyed it a lot.",
-    #         "What a bad movie, I did not like it.",
-    #         "Great plot and excellent acting!",
-    #         "Worst film ever, completely awful.",
-    #         "It was an okay movie, nothing special.",
-    #         "The storyline was very boring and dull.",
-    #         "Loved the movie, it was wonderful!",
-    #         "Terrible film, I disliked it a lot.",
-    #         "Fantastic movie with great acting!",
-    #         "Awful movie, not worth watching.",
-    #         "One of the best movies I've seen.",
-    #         "Really bad film, don't recommend it.",
-    #         "Enjoyed every moment of the movie!",
-    #         "The movie was very disappointing.",
-    #     ],
-    #     "label": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    # }
+    data = {
+        "text": [
+            "I love this movie, it was fantastic!",
+            "I hate this movie, it was terrible!",
+            "This film was amazing, I enjoyed it a lot.",
+            "What a bad movie, I did not like it.",
+            "Great plot and excellent acting!",
+            "Worst film ever, completely awful.",
+            "It was an okay movie, nothing special.",
+            "The storyline was very boring and dull.",
+            "Loved the movie, it was wonderful!",
+            "Terrible film, I disliked it a lot.",
+            "Fantastic movie with great acting!",
+            "Awful movie, not worth watching.",
+            "One of the best movies I've seen.",
+            "Really bad film, don't recommend it.",
+            "Enjoyed every moment of the movie!",
+            "The movie was very disappointing.",
+        ],
+        "label": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+    }
 
     df = pd.DataFrame(data)
     texts = df["text"]
@@ -268,10 +267,15 @@ def run_svm(model_type: str):
                     zero_division=0,
                 )
             )
+            save_svm_model(
+                model=model.get("model"),
+                model_name=model_name,
+                model_type="default",
+            )
     elif model_type == "best":
-        models = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
-        models.get("best_model").fit(texts_train, labels_train)
-        labels_pred_best_model = models.get("best_model").predict(texts_test)
+        model = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
+        model.get("best_model").fit(texts_train, labels_train)
+        labels_pred_best_model = model.get("best_model").predict(texts_test)
         print("*****best_model*****")
         print("Classification Report:")
         print(
@@ -281,8 +285,11 @@ def run_svm(model_type: str):
                 zero_division=0,
             )
         )
-        print(models)
-    save_svm_model(models="dupa")
+        save_svm_model(
+            model=model.get("model"),
+            model_name=model.get("best_model").kernel,
+            model_type="best",
+        )
 
 
 # Upewnienie się, że dane są zbalansowane
