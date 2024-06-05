@@ -48,7 +48,7 @@ class JSONLProcessor:
             return
 
         # directory for output exists
-        directory = f"{self.datas_location}\Output"
+        directory = os.path.join(self.datas_location, "Output")
         if not os.path.exists(directory):
             os.makedirs(directory)
 
