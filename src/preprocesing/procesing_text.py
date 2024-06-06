@@ -3,6 +3,7 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from datasets import Dataset
 
 from configuration import DATASETS_PATH, DATASETS_PREPROCESED_PATH, IMAGES_PATH
@@ -93,6 +94,37 @@ def balance_dataset(dataset: Dataset) -> Dataset:
     return Dataset.from_pandas(filtered_df)
 
 
+def balance_rating_undersampling(dataset: Dataset) -> Dataset:
+    """
+    Balance the dataset by undersampling the majority class.
+
+    Args:
+        dataset (Dataset): Input dataset.
+
+    Returns:
+        Dataset: Balanced dataset.
+    """
+    dataset_pandas = dataset.to_pandas()
+
+    class_0 = dataset_pandas[dataset_pandas["rating"] == 0]
+    class_1 = dataset_pandas[dataset_pandas["rating"] == 1]
+
+    count_class_0, count_class_1 = class_0.shape[0], class_1.shape[0]
+    print(f"Number of samples with rating 0: {count_class_0}")
+    print(f"Number of samples with rating 1: {count_class_1}")
+
+    # undersampling
+    if count_class_0 > count_class_1:
+        class_0 = class_0.sample(n=count_class_1, random_state=42)
+    else:
+        class_1 = class_1.sample(n=count_class_0, random_state=42)
+
+    balanced_df = pd.concat([class_0, class_1])
+    balanced_df = balanced_df.reset_index(drop=True)
+
+    return Dataset.from_pandas(balanced_df)
+
+
 def preprocesing_dataset(dataset_name: str) -> None:
     """
     Preprocess the dataset by balancing and converting ratings to binary.
@@ -111,15 +143,17 @@ def preprocesing_dataset(dataset_name: str) -> None:
 
     balanced_text_lengths = [len(text.split()) for text in balanced_dataset["text"]]
 
-    # Porównaj rozkład długości tekstu przed i po równoważeniu danych
     plot_text_length_distribution(original_text_lengths, balanced_text_lengths, dataset_name)
 
     # change rating to binary
     dataset_filtered = balanced_dataset.map(lambda example: {"rating": map_rating(example["rating"])})
 
+    undersampling_dataset = balance_rating_undersampling(dataset_filtered)
+    print(f"Length of undersapling dataset: {len(undersampling_dataset)}")
+
     print("Saving dataset...")
     save_dataset(
-        dataset_filtered,
+        undersampling_dataset,
         dataset_name,
         path=DATASETS_PREPROCESED_PATH,
     )
