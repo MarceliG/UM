@@ -1,6 +1,7 @@
 import argparse
 
 from data_manager import download
+from preprocesing import preprocesing_dataset
 from svm import run_svm
 
 
@@ -24,13 +25,13 @@ def main():
     parser.add_argument(
         "-dd",
         "--download-data",
-        action="store_true",
+        type=str,
         help="If passed, the dataset for text classification will be downloaded.",
     )
     parser.add_argument(
         "-pp",
         "--pre-processing",
-        action="store_true",
+        type=str,
         help="If passed, run text processing and save the processed text.",
     )
     parser.add_argument(
@@ -48,10 +49,10 @@ def main():
 
     args = parser.parse_args()
     if args.download_data:
-        download()
+        download(args.download_data)
 
     if args.pre_processing:
-        print("Running text processing and saving the processed text...")
+        preprocesing_dataset(args.pre_processing)
 
     if args.svm:
         for svm_option in args.svm:

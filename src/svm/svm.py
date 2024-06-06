@@ -206,10 +206,17 @@ def run_svm(model_type: str):
 
     nltk.download("stopwords")
 
+    HOME_PATH = os.getcwd()
+    DATAS_OUTPUT_PATH = os.path.join(HOME_PATH, "datas", "output")
+    DATAS_OUTPUT_SVM_PATH = os.path.join(DATAS_OUTPUT_PATH, "All_Beauty_Output.jsonl")
+
+    print()
+    print(DATAS_OUTPUT_SVM_PATH)
+    print()
     # Replace with the proper texts
-    # data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
-    # with open(data_directory, "r") as file:
-    #     data = json.load(file)
+    data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
+    with open(DATAS_OUTPUT_SVM_PATH, "r") as file:
+        data = json.load(file)
 
     data = {
         "text": [

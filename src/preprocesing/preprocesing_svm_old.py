@@ -39,10 +39,6 @@ class SVMpreprocesing:
     def preprocesing(self):
         files = glob.glob(os.path.join(self.datas_location, "*.jsonl"))
 
-        if not files:
-            print("No files to prepare")
-            return
-
         # directory for svm exists
         directory = os.path.join(self.datas_location, "..", "SVM")
         if not os.path.exists(directory):

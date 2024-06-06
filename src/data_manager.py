@@ -32,6 +32,8 @@ def save_dataset(dataset: Dataset, dataset_name: str, path: Optional[str] = None
     """
     if path is None:
         path = os.path.join(DATASET_PATH, dataset_name)
+    else:
+        path = os.path.join(path, dataset_name)
     print(f"Saving dataset to: {path}")
     dataset.save_to_disk(path)
 
@@ -50,8 +52,12 @@ def load_dataset_from_disc(dataset_name: str) -> Dataset:
     return load_from_disk(path)
 
 
-def download():
-    """Downloads a dataset and saves it to disk."""
-    category = "raw_review_All_Beauty"
+def download(category: str = "raw_review_All_Beauty"):
+    """
+    Downloads a dataset and saves it to disk.
+
+    Args:
+        category (str): Category dataset to download.
+    """
     dataset = download_dataset(category)
     save_dataset(dataset=dataset, dataset_name=category)
