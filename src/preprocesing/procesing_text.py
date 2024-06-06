@@ -20,21 +20,30 @@ DATASETS_TOKENIZED_PATH = os.path.join(DATASETS_PATH, "tokenized")
 IMAGES_PATH = os.path.join(DATASETS_PATH, "images")
 
 
-def plot_text_length_distribution(dataset, dataset_name):
+def plot_text_length_distribution(original_text_lengths, balanced_text_lengths, dataset_name):
     os.makedirs(IMAGES_PATH, exist_ok=True)
-    # Pobierz kolumnę tekstów
-    texts = dataset["text"]
 
-    # Oblicz długość każdego tekstu (liczbę słów lub znaków)
-    text_lengths = [len(text.split()) for text in texts]  # Liczba słów
+    # Stwórz dwa subploty dla porównania
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
-    # Wygeneruj histogram długości tekstów
-    plt.hist(text_lengths, bins="auto", edgecolor="black", alpha=0.7)
-    plt.xlabel("Text Length")
-    plt.ylabel("Frequency")
-    plt.title("Text Length Distribution")
-    path_to_save = os.path.join(IMAGES_PATH, dataset_name + ".jpeg")
-    plt.savefig(path_to_save)  # Zapisz wykres jako obraz
+    # Pierwszy subplot dla oryginalnych danych
+    ax1.hist(original_text_lengths, bins=250, edgecolor="black")
+    ax1.set_xlabel("Text Length")
+    ax1.set_ylabel("Frequency")
+    ax1.set_title("Original Text Length Distribution")
+    ax1.set_xlim(0, 300)
+
+    # Drugi subplot dla danych po równoważeniu
+    ax2.hist(balanced_text_lengths, bins=10, edgecolor="black")
+    ax2.set_xlabel("Text Length")
+    ax2.set_ylabel("Frequency")
+    ax2.set_title("Balanced Text Length Distribution")
+    ax2.set_xlim(0, 300)
+
+    # Zapisz wykresy jako obraz
+    path_to_save = os.path.join(IMAGES_PATH, dataset_name + "_comparison.jpeg")
+    plt.savefig(path_to_save)
+    plt.close()
 
 
 def map_rating(rating):
@@ -68,12 +77,17 @@ def balance_dataset(dataset):
 def preprocesing_dataset(dataset_name):
     print("Running text processing")
     dataset_raw = load_dataset_from_disc(os.path.join(DATASETS_PATH, dataset_name)).select_columns(["rating", "text"])
+    print(dataset_raw)
 
-    plot_text_length_distribution(dataset_raw, dataset_name)
+    original_text_lengths = [len(text.split()) for text in dataset_raw["text"]]
 
     balanced_dataset = balance_dataset(dataset_raw)
+    print(balanced_dataset)
 
-    plot_text_length_distribution(balanced_dataset, dataset_name + "_balanced")
+    balanced_text_lengths = [len(text.split()) for text in balanced_dataset["text"]]
+
+    # Porównaj rozkład długości tekstu przed i po równoważeniu danych
+    plot_text_length_distribution(original_text_lengths, balanced_text_lengths, dataset_name)
 
     # change rating to binary
     dataset_filtered = balanced_dataset.map(lambda example: {"rating": map_rating(example["rating"])})
@@ -84,49 +98,4 @@ def preprocesing_dataset(dataset_name):
         dataset_name,
         path=DATASETS_PREPROCESED_PATH,
     )
-    print("Saved")
-    tokenize_svm_text(dataset_filtered, dataset_name)
-
-
-def batch_generator(texts, batch_size=100):
-    for i in range(0, len(texts), batch_size):
-        yield texts[i : i + batch_size]
-
-
-def tokenize_svm_text(dataset, dataset_name, batch_size=1000):
-    print("Tokenize...")
-
-    texts = dataset["text"]
-    labels = dataset["rating"]
-
-    nltk.download("stopwords")
-    stop_words = list(stopwords.words("english"))
-    vectorizer = TfidfVectorizer(stop_words=stop_words, )
-
-    total_texts = len(texts)
-    progress_bar = tqdm(total=total_texts, desc="Tokenizing")
-
-    # Tokenizujemy i przetwarzamy teksty w partiach
-    tokenized_texts = []
-    for batch_texts in batch_generator(texts, batch_size):
-        x_tfidf = vectorizer.fit_transform(batch_texts)
-        features = vectorizer.get_feature_names_out()
-        batch_tokenized_texts = [dict(zip(features, row)) for row in x_tfidf.toarray()]
-        tokenized_texts.extend(batch_tokenized_texts)
-
-        # Aktualizacja paska postępu
-        progress_bar.update(len(batch_texts))
-
-    # Zamknięcie paska postępu
-    progress_bar.close()
-
-    # Konwertujemy rzadką macierz do postaci listy słowników
-    features = vectorizer.get_feature_names_out()
-    tokenized_texts = [dict(zip(features, row)) for row in x_tfidf.toarray()]
-
-    # Tworzymy nowy zestaw danych z przetworzonymi danymi
-    processed_dataset = Dataset.from_dict({"tokenized_text": tokenized_texts, "rating": labels})
-
-    print("Saving tokenized text")
-    save_dataset(processed_dataset, dataset_name, DATASETS_TOKENIZED_PATH)
     print("Saved")

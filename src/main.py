@@ -5,13 +5,13 @@ from preprocesing import preprocesing_dataset
 from svm import run_svm
 
 
-def run_model(model_type: str, param_type: str):
+def run_model(model_type: str, param_type: str, percentage:int):
     if model_type == "svm":
         if param_type == "default":
             print("Running SVM with default parameters...")
         elif param_type == "best":
             print("Running SVM with best parameters...")
-        run_svm(model_type=param_type)
+        run_svm(model_type=param_type, percentage_dataset=percentage)
     elif model_type == "bert":
         if param_type == "default":
             print("Running BERT with default parameters...")
@@ -47,6 +47,14 @@ def main():
         help="Train BERT model. Options: 'default', 'best'. You can specify both.",
     )
 
+    parser.add_argument(
+        "-p",
+        "--percentage",
+        type=int,
+        default=100,
+        help="Specify the percentage of dataset to use to teach the model.",
+    )
+
     args = parser.parse_args()
     if args.download_data:
         download(args.download_data)
@@ -56,10 +64,10 @@ def main():
 
     if args.svm:
         for svm_option in args.svm:
-            run_model(model_type="svm", param_type=svm_option)
+            run_model(model_type="svm", param_type=svm_option, percentage=args.percentage)
     if args.bert:
         for svm_option in args.bert:
-            run_model(model_type="bert", param_type=svm_option)
+            run_model(model_type="bert", param_type=svm_option, percentage=args.percentage)
 
 
 if __name__ == "__main__":

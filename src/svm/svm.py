@@ -13,8 +13,15 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, make_scorer
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
+from data_manager import load_dataset_from_disc
 from preprocesing import split_data
 from svm import save_svm_model
+
+HOME_PATH = os.getcwd()
+DATA_PATH = os.path.join(HOME_PATH, "data")
+DATASETS_PATH = os.path.join(DATA_PATH, "datasets")
+DATAS_OUTPUT_PATH = os.path.join(HOME_PATH, "datas", "output")
+DATASETS_PREPROCESED_PATH = os.path.join(DATASETS_PATH, "preprocesed")
 
 
 class SVMclassifier:
@@ -201,51 +208,55 @@ class SVMclassifier:
         return scores.mean()
 
 
-def run_svm(model_type: str):
+def run_svm(model_type: str, percentage_dataset: int):
     """Run SVM function."""
 
     nltk.download("stopwords")
 
-    HOME_PATH = os.getcwd()
-    DATAS_OUTPUT_PATH = os.path.join(HOME_PATH, "datas", "output")
-    DATAS_OUTPUT_SVM_PATH = os.path.join(DATAS_OUTPUT_PATH, "All_Beauty_Output.jsonl")
+    dataset = load_dataset_from_disc(os.path.join(DATASETS_PREPROCESED_PATH, "raw_review_All_Beauty"))
+    df = dataset.to_pandas()
+    # print()
+    # print(DATAS_OUTPUT_SVM_PATH)
+    # print()
+    # # Replace with the proper texts
+    # data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
+    # with open(DATAS_OUTPUT_SVM_PATH, "r") as file:
+    #     data = json.load(file)
 
-    print()
-    print(DATAS_OUTPUT_SVM_PATH)
-    print()
-    # Replace with the proper texts
-    data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
-    with open(DATAS_OUTPUT_SVM_PATH, "r") as file:
-        data = json.load(file)
+    # data = {
+    #     "text": [
+    #         "I love this movie, it was fantastic!",
+    #         "I hate this movie, it was terrible!",
+    #         "This film was amazing, I enjoyed it a lot.",
+    #         "What a bad movie, I did not like it.",
+    #         "Great plot and excellent acting!",
+    #         "Worst film ever, completely awful.",
+    #         "It was an okay movie, nothing special.",
+    #         "The storyline was very boring and dull.",
+    #         "Loved the movie, it was wonderful!",
+    #         "Terrible film, I disliked it a lot.",
+    #         "Fantastic movie with great acting!",
+    #         "Awful movie, not worth watching.",
+    #         "One of the best movies I've seen.",
+    #         "Really bad film, don't recommend it.",
+    #         "Enjoyed every moment of the movie!",
+    #         "The movie was very disappointing.",
+    #     ],
+    #     "label": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+    # }
 
-    data = {
-        "text": [
-            "I love this movie, it was fantastic!",
-            "I hate this movie, it was terrible!",
-            "This film was amazing, I enjoyed it a lot.",
-            "What a bad movie, I did not like it.",
-            "Great plot and excellent acting!",
-            "Worst film ever, completely awful.",
-            "It was an okay movie, nothing special.",
-            "The storyline was very boring and dull.",
-            "Loved the movie, it was wonderful!",
-            "Terrible film, I disliked it a lot.",
-            "Fantastic movie with great acting!",
-            "Awful movie, not worth watching.",
-            "One of the best movies I've seen.",
-            "Really bad film, don't recommend it.",
-            "Enjoyed every moment of the movie!",
-            "The movie was very disappointing.",
-        ],
-        "label": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    }
+    # df = pd.DataFrame(data)
 
-    df = pd.DataFrame(data)
     texts = df["text"]
-    labels = df["label"]
+    labels = df["rating"]
 
+    subset_size = int(len(df) * percentage_dataset / 100)
+    print(f"Size of dataset: {subset_size}")
+    texts = df["text"].iloc[:subset_size]
+    labels = df["rating"].iloc[:subset_size]
     stop_words = list(stopwords.words("english"))
-    vectorizer = TfidfVectorizer(stop_words=stop_words)
+
+    vectorizer = TfidfVectorizer(stop_words=stop_words, max_features=1000, max_df=0.90, min_df=2)
 
     x_tfidf = vectorizer.fit_transform(texts)
 
@@ -263,6 +274,7 @@ def run_svm(model_type: str):
     if model_type == "default":
         models = svm_classifier.create_models_with_all_kernels()
         for model_name, model in models.items():
+            print(f"Training: {model_name}")
             model.get("model").fit(texts_train, labels_train)
             labels_pred = model.get("model").predict(texts_test)
             print(f"*****{model_name}*****")
@@ -297,7 +309,3 @@ def run_svm(model_type: str):
             model_name=model.get("best_model").kernel,
             model_type="best",
         )
-
-
-# Upewnienie się, że dane są zbalansowane
-# zapisz modele default i model best oraz parametry jakie mają
