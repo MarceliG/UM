@@ -1,26 +1,27 @@
 import os
-import re
+from typing import List
 
 import matplotlib.pyplot as plt
-import nltk
 import numpy as np
-import pandas as pd
 from datasets import Dataset
-from nltk.corpus import stopwords
-from scipy import sparse
-from sklearn.feature_extraction.text import TfidfVectorizer
-from tqdm import tqdm
 
+from configuration import DATASETS_PATH, DATASETS_PREPROCESED_PATH, IMAGES_PATH
 from data_manager import load_dataset_from_disc, save_dataset
 
-DATA_PATH = os.path.join(os.getcwd(), "data")
-DATASETS_PATH = os.path.join(DATA_PATH, "datasets")
-DATASETS_PREPROCESED_PATH = os.path.join(DATASETS_PATH, "preprocesed")
-DATASETS_TOKENIZED_PATH = os.path.join(DATASETS_PATH, "tokenized")
-IMAGES_PATH = os.path.join(DATASETS_PATH, "images")
 
+def plot_text_length_distribution(
+    original_text_lengths: List[int],
+    balanced_text_lengths: List[int],
+    dataset_name: str,
+) -> None:
+    """
+    Plot the distribution of text lengths for original and balanced datasets.
 
-def plot_text_length_distribution(original_text_lengths, balanced_text_lengths, dataset_name):
+    Args:
+        original_text_lengths (List[int]): List of text lengths in the original dataset.
+        balanced_text_lengths (List[int]): List of text lengths in the balanced dataset.
+        dataset_name (str): Name of the dataset.
+    """
     os.makedirs(IMAGES_PATH, exist_ok=True)
 
     # Stwórz dwa subploty dla porównania
@@ -46,11 +47,29 @@ def plot_text_length_distribution(original_text_lengths, balanced_text_lengths, 
     plt.close()
 
 
-def map_rating(rating):
+def map_rating(rating: float) -> int:
+    """
+    Map the rating to binary.
+
+    Args:
+        rating (float): Rating value.
+
+    Returns:
+        int: Binary rating (0 or 1).
+    """
     return 0 if rating <= 2.5 else 1
 
 
-def balance_dataset(dataset):
+def balance_dataset(dataset: Dataset) -> Dataset:
+    """
+    Balance the dataset by removing outliers based on text length.
+
+    Args:
+        dataset (Dataset): Input dataset.
+
+    Returns:
+        Dataset: Balanced dataset.
+    """
     dataset_pandas = dataset.to_pandas()
 
     dataset_pandas["text_length"] = dataset_pandas["text"].apply(lambda x: len(x.split()))
@@ -74,7 +93,13 @@ def balance_dataset(dataset):
     return Dataset.from_pandas(filtered_df)
 
 
-def preprocesing_dataset(dataset_name):
+def preprocesing_dataset(dataset_name: str) -> None:
+    """
+    Preprocess the dataset by balancing and converting ratings to binary.
+
+    Args:
+        dataset_name (str): Name of the dataset.
+    """
     print("Running text processing")
     dataset_raw = load_dataset_from_disc(os.path.join(DATASETS_PATH, dataset_name)).select_columns(["rating", "text"])
     print(dataset_raw)

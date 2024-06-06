@@ -5,7 +5,18 @@ from preprocesing import preprocesing_dataset
 from svm import run_svm
 
 
-def run_model(model_type: str, param_type: str, percentage:int):
+def run_model(model_type: str, param_type: str, percentage: int) -> None:
+    """
+    Run the specified model with specified parameters.
+
+    Args:
+        model_type (str): Type of model (svm or bert).
+        param_type (str): Type of parameters (default or best).
+        percentage (int): Percentage of dataset to use.
+
+    Returns:
+        None
+    """
     if model_type == "svm":
         if param_type == "default":
             print("Running SVM with default parameters...")
