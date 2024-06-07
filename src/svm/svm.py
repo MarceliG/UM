@@ -8,7 +8,7 @@ from nltk.corpus import stopwords
 from sklearn import svm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV, cross_val_score
 
 from configuration import DATASETS_PREPROCESED_PATH
 from data_manager import load_dataset_from_disc
@@ -126,78 +126,32 @@ class SVMclassifier:
 
         return models
 
-    def find_best_model(self, texts: np.ndarray, labels: np.ndarray, n_trials: int = 10) -> Dict:
+    def find_best_model(self, texts: np.ndarray, labels: np.ndarray) -> Dict:
         """
-        Use Optuna to optimize hyperparameters.
+        Use GridSearchCV to optimize hyperparameters.
 
         Args:
             texts: Feature data.
             labels: Target labels.
-            n_trials: Number of trials for the optimization.
 
         Returns:
             A dictionary containing the best model with optimized parameters.
         """
-        study = optuna.create_study(direction="maximize")
-        study.optimize(lambda trial: self.objective(trial, texts, labels), n_trials=n_trials)
+        param_grid = {
+            "C": [0.001, 0.01, 0.1, 1, 10, 100],
+            "gamma": [1, 0.1, 0.01, 0.001, 0.0001],
+            "kernel": ["linear", "poly", "rbf", "sigmoid"],
+            "degree": [1, 2, 3, 4, 5],
+            "coef0": [0.0, 0.1, 0.5, 1.0],
+        }
 
-        best_params = study.best_params
-        best_model = self.create_model(
-            c=best_params["C"],
-            kernel=best_params["kernel"],
-            degree=best_params.get("degree", 3),
-            gamma=best_params.get("gamma", "scale"),
-            coef0=best_params.get("coef0", 0.0),
-            shrinking=best_params.get("shrinking", True),
-            probability=best_params.get("probability", False),
-            tol=best_params.get("tol", 0.001),
-            cache_size=best_params.get("cache_size", 200),
-            class_weight=best_params.get("class_weight"),
-            verbose=best_params.get("verbose", False),
-            max_iter=best_params.get("max_iter", -1),
-            decision_function_shape=best_params.get("decision_function_shape", "ovr"),
-            break_ties=best_params.get("break_ties", False),
-            random_state=best_params.get("random_state"),
-        )
-        return {"best_model": best_model["model"], "best_parameters": best_model["parameters"]}
+        grid = GridSearchCV(svm.SVC(), param_grid, verbose=3, cv=5)
+        grid.fit(texts, labels)
 
-    def objective(self, trial: optuna.Trial, texts: np.ndarray, labels: np.ndarray) -> float:
-        """
-        Objective function for optimization.
+        best_params = grid.best_params_
+        best_model = grid.best_estimator_
 
-        Args:
-            trial: Optuna's Trial object.
-            texts: Feature data.
-            labels: Target labels.
-
-        Returns:
-            The accuracy score of the model with current hyperparameters.
-        """
-        c = trial.suggest_loguniform("C", 1e-10, 1e10)
-        kernel = trial.suggest_categorical("kernel", ["linear", "poly", "rbf", "sigmoid"])
-        degree = trial.suggest_int("degree", 1, 10)
-        gamma = trial.suggest_categorical("gamma", ["scale", "auto"])
-        coef0 = trial.suggest_uniform("coef0", -10, 10)
-
-        model = self.create_model(
-            c=c,
-            kernel=kernel,
-            degree=degree,
-            gamma=gamma,
-            coef0=coef0,
-            shrinking=True,
-            probability=False,
-            tol=0.001,
-            cache_size=200,
-            class_weight=None,
-            verbose=False,
-            max_iter=-1,
-            decision_function_shape="ovr",
-            break_ties=False,
-            random_state=None,
-        )
-        scores = cross_val_score(model["model"], texts, labels, cv=5)
-        return scores.mean()
+        return {"best_model": best_model, "best_parameters": best_params}
 
 
 def run_svm(model_type: str, percentage_dataset: float = 100):
@@ -258,11 +212,11 @@ def run_svm(model_type: str, percentage_dataset: float = 100):
             )
     elif model_type == "best":
         model = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
-        model.get("best_model").fit(texts_train, labels_train)
         labels_pred_best_model = model.get("best_model").predict(texts_test)
         print()
-        print(model.get("best_parameters"))
         print("*****best_model*****")
+        print(model.get("best_model").kernel)
+        print(model.get("best_parameters"))
         print("Classification Report:")
         print(
             classification_report(
