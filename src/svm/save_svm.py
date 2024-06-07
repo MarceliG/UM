@@ -3,9 +3,7 @@ import os
 import joblib
 from sklearn import svm
 
-HOME_PATH = os.getcwd()
-DATA_PATH = os.path.join(HOME_PATH, "data")
-MODELS_PATH = os.path.join(DATA_PATH, "models")
+from configuration import MODELS_PATH
 
 
 def save_svm_model(model: svm.SVC, model_name: str, model_type: str):

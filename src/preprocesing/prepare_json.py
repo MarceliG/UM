@@ -43,10 +43,6 @@ class JSONLProcessor:
     def process_files(self):
         files = glob.glob(os.path.join(self.datas_location, "*.jsonl"))
 
-        if not files:
-            print("No files to prepare")
-            return
-
         # directory for output exists
         directory = os.path.join(self.datas_location, "Output")
         if not os.path.exists(directory):

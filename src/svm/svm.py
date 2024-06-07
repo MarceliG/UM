@@ -1,18 +1,17 @@
-import json
 import os
 from typing import Dict, Optional, Union
 
 import nltk
 import numpy as np
 import optuna
-import pandas as pd
 from nltk.corpus import stopwords
 from sklearn import svm
-from sklearn.datasets import load_iris
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, classification_report, make_scorer
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV, cross_val_score
 
+from configuration import DATASETS_PREPROCESED_PATH
+from data_manager import load_dataset_from_disc
 from preprocesing import split_data
 from svm import save_svm_model
 
@@ -127,118 +126,56 @@ class SVMclassifier:
 
         return models
 
-    def find_best_model(self, texts: np.ndarray, labels: np.ndarray, n_trials: int = 100) -> Dict:
+    def find_best_model(self, texts: np.ndarray, labels: np.ndarray) -> Dict:
         """
-        Use Optuna to optimize hyperparameters.
+        Use GridSearchCV to optimize hyperparameters.
 
         Args:
             texts: Feature data.
             labels: Target labels.
-            n_trials: Number of trials for the optimization.
 
         Returns:
             A dictionary containing the best model with optimized parameters.
         """
-        study = optuna.create_study(direction="maximize")
-        study.optimize(lambda trial: self.objective(trial, texts, labels), n_trials=n_trials)
+        param_grid = {
+            "C": [0.001, 0.01, 0.1, 1, 10, 100],
+            "gamma": [1, 0.1, 0.01, 0.001, 0.0001],
+            "kernel": ["linear", "poly", "rbf", "sigmoid"],
+            "degree": [1, 2, 3, 4, 5],
+            "coef0": [0.0, 0.1, 0.5, 1.0],
+        }
 
-        best_params = study.best_params
-        best_model = self.create_model(
-            c=best_params["C"],
-            kernel=best_params["kernel"],
-            degree=best_params.get("degree", 3),
-            gamma=best_params.get("gamma", "scale"),
-            coef0=best_params.get("coef0", 0.0),
-            shrinking=best_params.get("shrinking", True),
-            probability=best_params.get("probability", False),
-            tol=best_params.get("tol", 0.001),
-            cache_size=best_params.get("cache_size", 200),
-            class_weight=best_params.get("class_weight"),
-            verbose=best_params.get("verbose", False),
-            max_iter=best_params.get("max_iter", -1),
-            decision_function_shape=best_params.get("decision_function_shape", "ovr"),
-            break_ties=best_params.get("break_ties", False),
-            random_state=best_params.get("random_state"),
-        )
-        return {"best_model": best_model["model"], "best_parameters": best_model["parameters"]}
+        grid = GridSearchCV(svm.SVC(), param_grid, verbose=3, cv=5)
+        grid.fit(texts, labels)
 
-    def objective(self, trial: optuna.Trial, texts: np.ndarray, labels: np.ndarray) -> float:
-        """
-        Objective function for optimization.
+        best_params = grid.best_params_
+        best_model = grid.best_estimator_
 
-        Args:
-            trial: Optuna's Trial object.
-            texts: Feature data.
-            labels: Target labels.
-
-        Returns:
-            The accuracy score of the model with current hyperparameters.
-        """
-        c = trial.suggest_loguniform("C", 1e-10, 1e10)
-        kernel = trial.suggest_categorical("kernel", ["linear", "poly", "rbf", "sigmoid"])
-        degree = trial.suggest_int("degree", 1, 10)
-        gamma = trial.suggest_categorical("gamma", ["scale", "auto"])
-        coef0 = trial.suggest_uniform("coef0", -10, 10)
-
-        model = self.create_model(
-            c=c,
-            kernel=kernel,
-            degree=degree,
-            gamma=gamma,
-            coef0=coef0,
-            shrinking=True,
-            probability=False,
-            tol=0.001,
-            cache_size=200,
-            class_weight=None,
-            verbose=False,
-            max_iter=-1,
-            decision_function_shape="ovr",
-            break_ties=False,
-            random_state=None,
-        )
-        scores = cross_val_score(model["model"], texts, labels, cv=5)
-        return scores.mean()
+        return {"best_model": best_model, "best_parameters": best_params}
 
 
-def run_svm(model_type: str):
+def run_svm(model_type: str, percentage_dataset: float = 100):
     """Run SVM function."""
 
     nltk.download("stopwords")
 
-    # Replace with the proper texts
-    # data_directory = os.path.join(os.path.dirname(__file__), "..", "..", "datas", "SVM", "SVM.jsonl")
-    # with open(data_directory, "r") as file:
-    #     data = json.load(file)
+    dataset = load_dataset_from_disc(os.path.join(DATASETS_PREPROCESED_PATH, "raw_review_All_Beauty"))
+    df = dataset.to_pandas()
 
-    data = {
-        "text": [
-            "I love this movie, it was fantastic!",
-            "I hate this movie, it was terrible!",
-            "This film was amazing, I enjoyed it a lot.",
-            "What a bad movie, I did not like it.",
-            "Great plot and excellent acting!",
-            "Worst film ever, completely awful.",
-            "It was an okay movie, nothing special.",
-            "The storyline was very boring and dull.",
-            "Loved the movie, it was wonderful!",
-            "Terrible film, I disliked it a lot.",
-            "Fantastic movie with great acting!",
-            "Awful movie, not worth watching.",
-            "One of the best movies I've seen.",
-            "Really bad film, don't recommend it.",
-            "Enjoyed every moment of the movie!",
-            "The movie was very disappointing.",
-        ],
-        "label": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    }
-
-    df = pd.DataFrame(data)
     texts = df["text"]
-    labels = df["label"]
+    labels = df["rating"]
+
+    # Get % subset of dataset
+    subset_size = round(len(df) * percentage_dataset / 100)
+    print(f"Size of dataset: {subset_size}")
+    subset_df = df.sample(n=subset_size, random_state=42)
+
+    texts = subset_df["text"]
+    labels = subset_df["rating"]
 
     stop_words = list(stopwords.words("english"))
-    vectorizer = TfidfVectorizer(stop_words=stop_words)
+
+    vectorizer = TfidfVectorizer(stop_words=stop_words, max_features=1000, max_df=0.90, min_df=2)
 
     x_tfidf = vectorizer.fit_transform(texts)
 
@@ -256,6 +193,7 @@ def run_svm(model_type: str):
     if model_type == "default":
         models = svm_classifier.create_models_with_all_kernels()
         for model_name, model in models.items():
+            print(f"Training: {model_name}")
             model.get("model").fit(texts_train, labels_train)
             labels_pred = model.get("model").predict(texts_test)
             print(f"*****{model_name}*****")
@@ -274,9 +212,11 @@ def run_svm(model_type: str):
             )
     elif model_type == "best":
         model = svm_classifier.find_best_model(texts=texts_train, labels=labels_train)
-        model.get("best_model").fit(texts_train, labels_train)
         labels_pred_best_model = model.get("best_model").predict(texts_test)
+        print()
         print("*****best_model*****")
+        print(model.get("best_model").kernel)
+        print(model.get("best_parameters"))
         print("Classification Report:")
         print(
             classification_report(
@@ -290,7 +230,3 @@ def run_svm(model_type: str):
             model_name=model.get("best_model").kernel,
             model_type="best",
         )
-
-
-# Upewnienie się, że dane są zbalansowane
-# zapisz modele default i model best oraz parametry jakie mają
