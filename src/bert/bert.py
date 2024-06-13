@@ -1,17 +1,17 @@
 import os
-import pandas as pd
 
+import pandas as pd
 import torch
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
-
-from transformers import BertTokenizer, BertModel, AdamW, get_linear_schedule_with_warmup
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
-from data_manager import load_dataset_from_disc
-from configuration import DATASETS_PREPROCESED_PATH
+from transformers import AdamW, BertModel, BertTokenizer, get_linear_schedule_with_warmup
 
 from bert.save_bert import save_bert_model
+from configuration import DATASETS_PREPROCESED_PATH
+from data_manager import load_dataset_from_disc
+
 
 class TextClassificationDataset(Dataset):
     def __init__(self, texts, labels, tokenizer, max_length):
@@ -22,20 +22,22 @@ class TextClassificationDataset(Dataset):
 
     def __len__(self):
         return len(self.texts)
-    
+
     def __getitem__(self, idx):
         print(idx)
         print(self.texts)
 
         text = self.texts[idx]
         label = self.labels[idx]
-        encoding = self.tokenizer(text, return_tensors='pt', max_length=self.max_length, padding='max_length', truncation=True)
+        encoding = self.tokenizer(
+            text, return_tensors="pt", max_length=self.max_length, padding="max_length", truncation=True
+        )
         return {
-            'input_ids': encoding['input_ids'].flatten(), 
-            'attention_mask': encoding['attention_mask'].flatten(), 
-            'label': torch.tensor(label)
+            "input_ids": encoding["input_ids"].flatten(),
+            "attention_mask": encoding["attention_mask"].flatten(),
+            "label": torch.tensor(label),
         }
-    
+
 
 class BERTClassifier(nn.Module):
     def __init__(self, bert_model_name, num_classes):
@@ -50,14 +52,14 @@ class BERTClassifier(nn.Module):
         x = self.dropout(pooled_output)
         logits = self.fc(x)
         return logits
-    
+
     def model_train(self, model, data_loader, optimizer, scheduler, device):
         self.train()
         for batch in data_loader:
             optimizer.zero_grad()
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['label'].to(device)
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            labels = batch["label"].to(device)
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             loss = nn.CrossEntropyLoss()(outputs, labels)
             loss.backward()
@@ -70,20 +72,21 @@ class BERTClassifier(nn.Module):
         actual_labels = []
         with torch.no_grad():
             for batch in data_loader:
-                input_ids = batch['input_ids'].to(device)
-                attention_mask = batch['attention_mask'].to(device)
-                labels = batch['label'].to(device)
+                input_ids = batch["input_ids"].to(device)
+                attention_mask = batch["attention_mask"].to(device)
+                labels = batch["label"].to(device)
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
                 _, preds = torch.max(outputs, dim=1)
                 predictions.extend(preds.cpu().tolist())
                 actual_labels.extend(labels.cpu().tolist())
         return accuracy_score(actual_labels, predictions), classification_report(actual_labels, predictions)
 
+
 def run_bert(percentage_dataset: float = 100):
     """Run BERT function."""
 
     """Set up parameters"""
-    bert_model_name = 'bert-base-uncased'
+    bert_model_name = "bert-base-uncased"
     num_classes = 2
     max_length = 128
     batch_size = 16
@@ -123,12 +126,24 @@ def run_bert(percentage_dataset: float = 100):
     subset_size = round(len(df) * percentage_dataset / 100)
     print(f"Size of dataset: {subset_size}")
 
+    # (train_texts, val_texts, train_labels, val_labels) = train_test_split(
+    #     texts, labels, train_size=subset_size, random_state=42
+    # )
     (
-        train_texts, 
-        val_texts, 
-        train_labels, 
-        val_labels
-    ) = train_test_split(texts, labels, train_size=subset_size, random_state=42)
+        train_texts,
+        val_texts,
+        train_labels,
+        val_labels,
+    ) = train_test_split(
+        texts,
+        labels,
+        random_state=42,
+    )
+
+    train_texts = train_texts.reset_index(drop=True)
+    val_texts = val_texts.reset_index(drop=True)
+    train_labels = train_labels.reset_index(drop=True)
+    val_labels = val_labels.reset_index(drop=True)
 
     tokenizer = BertTokenizer.from_pretrained(bert_model_name)
     train_dataset = TextClassificationDataset(train_texts, train_labels, tokenizer, max_length)
@@ -151,7 +166,4 @@ def run_bert(percentage_dataset: float = 100):
         print(f"Validation Accuracy: {accuracy:.4f}")
         print(report)
 
-        save_bert_model(
-            model,
-            "bert_classifier.pth"
-        )
+        save_bert_model(model, "bert_classifier.pth")
