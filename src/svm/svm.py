@@ -230,3 +230,23 @@ def run_svm(model_type: str, percentage_dataset: float = 100):
             model_name=model.get("best_model").kernel,
             model_type="best",
         )
+    elif model_type == "custom":
+        custom_model = svm_classifier.create_model(c=100, coef0=0.5, degree=5, gamma=0.01, kernel="poly")
+        custom_model.get("model").fit(texts_train, labels_train)
+        labels_pred_custom_model = custom_model.get("model").predict(texts_test)
+        print()
+        print("*****custom_model*****")
+        print(custom_model)
+        print("Classification Report:")
+        print(
+            classification_report(
+                labels_test,
+                labels_pred_custom_model,
+                zero_division=0,
+            )
+        )
+        save_svm_model(
+            model=custom_model,
+            model_name=custom_model.kernel,
+            model_type="custom",
+        )

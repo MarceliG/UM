@@ -47,7 +47,7 @@ def main():
     )
     parser.add_argument(
         "--svm",
-        choices=["default", "best"],
+        choices=["default", "best", "custom"],
         nargs="*",
         help="Train SVM model. Options: 'default', 'best'. You can specify both.",
     )
