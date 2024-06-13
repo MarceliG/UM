@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
-from transformers import AdamW, BertModel, BertTokenizer, get_linear_schedule_with_warmup
+from transformers import BertModel, BertTokenizer, get_linear_schedule_with_warmup
 
 from bert.save_bert import save_bert_model
 from configuration import DATASETS_PREPROCESED_PATH
@@ -58,7 +58,7 @@ class BERTClassifier(nn.Module):
             attention_mask = batch["attention_mask"].to(device)
             labels = batch["label"].to(device)
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            loss = nn.CrossEntropyLoss()(outputs, labels)
+            loss = nn.CrossEntropyLoss()(outputs, labels.long())
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -123,9 +123,6 @@ def run_bert(percentage_dataset: float = 100):
     subset_size = round(len(df) * percentage_dataset / 100)
     print(f"Size of dataset: {subset_size}")
 
-    # (train_texts, val_texts, train_labels, val_labels) = train_test_split(
-    #     texts, labels, train_size=subset_size, random_state=42
-    # )
     (
         train_texts,
         val_texts,
@@ -152,7 +149,7 @@ def run_bert(percentage_dataset: float = 100):
     print("Use device to learn: ", device)
     model = BERTClassifier(bert_model_name, num_classes).to(device)
 
-    optimizer = AdamW(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     total_steps = len(train_dataloader) * num_epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
