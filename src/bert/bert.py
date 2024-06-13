@@ -24,9 +24,6 @@ class TextClassificationDataset(Dataset):
         return len(self.texts)
 
     def __getitem__(self, idx):
-        print(idx)
-        print(self.texts)
-
         text = self.texts[idx]
         label = self.labels[idx]
         encoding = self.tokenizer(
@@ -79,7 +76,7 @@ class BERTClassifier(nn.Module):
                 _, preds = torch.max(outputs, dim=1)
                 predictions.extend(preds.cpu().tolist())
                 actual_labels.extend(labels.cpu().tolist())
-        return accuracy_score(actual_labels, predictions), classification_report(actual_labels, predictions)
+        return accuracy_score(actual_labels, predictions), classification_report(actual_labels, predictions, zero_division=0)
 
 
 def run_bert(percentage_dataset: float = 100):
@@ -93,31 +90,31 @@ def run_bert(percentage_dataset: float = 100):
     num_epochs = 4
     learning_rate = 2e-5
 
-    # dataset = load_dataset_from_disc(os.path.join(DATASETS_PREPROCESED_PATH, "raw_review_All_Beauty"))
-    # df = dataset.to_pandas()
+    dataset = load_dataset_from_disc(os.path.join(DATASETS_PREPROCESED_PATH, "raw_review_All_Beauty"))
+    df = dataset.to_pandas()
 
-    data = {
-        "text": [
-            "I love this movie, it was fantastic!",
-            "I hate this movie, it was terrible!",
-            "This film was amazing, I enjoyed it a lot.",
-            "What a bad movie, I did not like it.",
-            "Great plot and excellent acting!",
-            "Worst film ever, completely awful.",
-            "It was an okay movie, nothing special.",
-            "The storyline was very boring and dull.",
-            "Loved the movie, it was wonderful!",
-            "Terrible film, I disliked it a lot.",
-            "Fantastic movie with great acting!",
-            "Awful movie, not worth watching.",
-            "One of the best movies I've seen.",
-            "Really bad film, don't recommend it.",
-            "Enjoyed every moment of the movie!",
-            "The movie was very disappointing.",
-        ],
-        "rating": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    }
-    df = pd.DataFrame(data)
+    # data = {
+    #     "text": [
+    #         "I love this movie, it was fantastic!",
+    #         "I hate this movie, it was terrible!",
+    #         "This film was amazing, I enjoyed it a lot.",
+    #         "What a bad movie, I did not like it.",
+    #         "Great plot and excellent acting!",
+    #         "Worst film ever, completely awful.",
+    #         "It was an okay movie, nothing special.",
+    #         "The storyline was very boring and dull.",
+    #         "Loved the movie, it was wonderful!",
+    #         "Terrible film, I disliked it a lot.",
+    #         "Fantastic movie with great acting!",
+    #         "Awful movie, not worth watching.",
+    #         "One of the best movies I've seen.",
+    #         "Really bad film, don't recommend it.",
+    #         "Enjoyed every moment of the movie!",
+    #         "The movie was very disappointing.",
+    #     ],
+    #     "rating": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+    # }
+    # df = pd.DataFrame(data)
 
     texts = df["text"]
     labels = df["rating"]
