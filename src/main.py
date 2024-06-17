@@ -29,7 +29,7 @@ def run_model(model_type: str, param_type: str, percentage: int) -> None:
             print("Running BERT with default parameters...")
         elif param_type == "best":
             print("Running BERT with best parameters...")
-        run_bert(percentage_dataset=percentage)
+        run_bert(model_type=param_type, percentage_dataset=percentage)
 
 
 def main():
