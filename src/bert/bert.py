@@ -1,6 +1,5 @@
 import os
 
-import pandas as pd
 import torch
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
@@ -11,7 +10,6 @@ from transformers import BertModel, BertTokenizer, Trainer, TrainingArguments, g
 from bert.save_bert import save_bert_model
 from configuration import DATASETS_PREPROCESED_PATH
 from data_manager import load_dataset_from_disc
-
 
 
 class TextClassificationDataset(Dataset):
@@ -33,7 +31,7 @@ class TextClassificationDataset(Dataset):
         return {
             "input_ids": encoding["input_ids"].flatten(),
             "attention_mask": encoding["attention_mask"].flatten(),
-            "label": torch.tensor(label),
+            "label": torch.tensor(label, dtype=torch.long),
         }
 
 
@@ -44,11 +42,16 @@ class BERTClassifier(nn.Module):
         self.dropout = nn.Dropout(0.1)
         self.fc = nn.Linear(self.bert.config.hidden_size, num_classes)
 
-    def forward(self, input_ids, attention_mask=None):
+    def forward(self, input_ids, attention_mask=None, labels=None):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         pooled_output = outputs.pooler_output
         x = self.dropout(pooled_output)
         logits = self.fc(x)
+
+        if labels is not None:
+            loss = nn.CrossEntropyLoss()(logits, labels)
+            return loss, logits
+
         return logits
 
 
@@ -59,8 +62,7 @@ def model_train(model, data_loader, optimizer, scheduler, device):
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
         labels = batch["label"].to(device)
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        loss = nn.CrossEntropyLoss()(outputs, labels.long())
+        loss, outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -79,12 +81,14 @@ def model_evaluate(model, data_loader, device):
             _, preds = torch.max(outputs, dim=1)
             predictions.extend(preds.cpu().tolist())
             actual_labels.extend(labels.cpu().tolist())
-    return accuracy_score(actual_labels, predictions), classification_report(actual_labels, predictions, zero_division=0)
+    return accuracy_score(actual_labels, predictions), classification_report(
+        actual_labels, predictions, zero_division=0
+    )
 
 
 def compute_metrics(eval_pred):
-    predictions, labels = eval_pred
-    predictions = predictions.argmax(axis=-1)
+    logits, labels = eval_pred
+    predictions = logits.argmax(axis=-1)
     return {"accuracy": accuracy_score(labels, predictions)}
 
 
@@ -99,31 +103,8 @@ def run_bert(model_type: str, percentage_dataset: float = 100):
     num_epochs = 4
     learning_rate = 2e-5
 
-    # dataset = load_dataset_from_disc(os.path.join(DATASETS_PREPROCESED_PATH, "raw_review_All_Beauty"))
-    # df = dataset.to_pandas()
-
-    data = {
-        "text": [
-            "I love this movie, it was fantastic!",
-            "I hate this movie, it was terrible!",
-            "This film was amazing, I enjoyed it a lot.",
-            "What a bad movie, I did not like it.",
-            "Great plot and excellent acting!",
-            "Worst film ever, completely awful.",
-            "It was an okay movie, nothing special.",
-            "The storyline was very boring and dull.",
-            "Loved the movie, it was wonderful!",
-            "Terrible film, I disliked it a lot.",
-            "Fantastic movie with great acting!",
-            "Awful movie, not worth watching.",
-            "One of the best movies I've seen.",
-            "Really bad film, don't recommend it.",
-            "Enjoyed every moment of the movie!",
-            "The movie was very disappointing.",
-        ],
-        "rating": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-    }
-    df = pd.DataFrame(data)
+    dataset = load_dataset_from_disc(os.path.join(DATASETS_PREPROCESED_PATH, "raw_review_All_Beauty"))
+    df = dataset.to_pandas()
 
     texts = df["text"]
     labels = df["rating"]
@@ -132,12 +113,7 @@ def run_bert(model_type: str, percentage_dataset: float = 100):
     subset_size = round(len(df) * percentage_dataset / 100)
     print(f"Size of dataset: {subset_size}")
 
-    (
-        train_texts, 
-        val_texts, 
-        train_labels, 
-        val_labels
-    ) = train_test_split(
+    (train_texts, val_texts, train_labels, val_labels) = train_test_split(
         texts,
         labels,
         random_state=42,
@@ -172,15 +148,10 @@ def run_bert(model_type: str, percentage_dataset: float = 100):
             print(report)
 
             save_bert_model(model, "bert_classifier.pth")
-    
+
     elif model_type == "best":
         # Best
-        training_args = TrainingArguments(
-            "test", 
-            eval_strategy="steps", 
-            eval_steps=50, 
-            disable_tqdm=True
-        )
+        training_args = TrainingArguments("test", eval_strategy="steps", eval_steps=50, disable_tqdm=True)
 
         trainer = Trainer(
             args=training_args,
@@ -192,9 +163,11 @@ def run_bert(model_type: str, percentage_dataset: float = 100):
         )
 
         best_run = trainer.hyperparameter_search(
-            direction="maximize", 
-            backend="ray", 
-            n_trials=5 # number of trials
+            direction="maximize",
+            backend="ray",
+            n_trials=5,  # number of trials
         )
+        print("Best run found:")
+        print(best_run)
 
         save_bert_model(model, "bert_classifier_best.pth")
