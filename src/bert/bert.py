@@ -112,6 +112,10 @@ def run_bert(model_type: str, percentage_dataset: float = 100):
     # Get % subset of dataset
     subset_size = round(len(df) * percentage_dataset / 100)
     print(f"Size of dataset: {subset_size}")
+    subset_df = df.sample(n=subset_size, random_state=42)
+
+    texts = subset_df["text"]
+    labels = subset_df["rating"]
 
     (train_texts, val_texts, train_labels, val_labels) = train_test_split(
         texts,
